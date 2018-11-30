@@ -1,0 +1,210 @@
+ TDC dc = TuiGetDC(wnd);
+ 
+TuiDrawText(dc, 24, 1, "Invalid Stock Symbol", TuiGetSysColor(BLACK_WHITE));
+
+
+{ STATIC,"STOCK HISTORY:                       MVolume:              MValue:",    IDC_STOCK0,  1, 1,  1,  80, TWS_CHILD|TWS_VISIBLE|TWS_DISABLED, 0, 0, "" },
+
+ { EDITBOX,"", IDC_SHOWSTOCK0, 1, 16, 1, 20, TWS_CHILD | TWS_VISIBLE | TES_UPPERCASE | TSS_LEFT, 0, HistSecGetStock, "Press Prev (Prev  Page) , Next (Next Page) or Enter Stock Symbol :"},
+
+ 
+ INT HistSecGetStock(TWND wnd, LPCSTR text)
+{
+             
+       TDC dc = TuiGetDC(wnd);
+
+
+       if (text[0] == 32)
+       {
+           lMaxRowSecHist = 0;
+       }
+
+       lMaxRowSecHist = MaxRowSecHist(dc,text);
+    
+       if (lMaxRowSecHist == 0 )
+       {
+         TuiDrawText(dc, 24, 1, "                                                                  ", TuiGetSysColor(BLACK_WHITE));
+         TuiDrawText(dc, 24, 1, "Invalid Stock Symbol", TuiGetSysColor(BLACK_WHITE));
+      
+           return FALSE; 
+       }
+       else 
+       {  
+   
+          TuiDrawText(dc, 24, 1, "Press Prev (Prev  Page) , Next (Next Page) or Enter Stock Symbol :", TuiGetSysColor(BLACK_WHITE));
+          strncpy(sDefSec, text, MW_STOCK_LEN);
+          lHistSecRec = lMaxRowSecHist;
+          if (lHistSecRec > 0)
+          {
+             lStartHistSecRec = 0;
+             lEndHistSecRec = lRowSechist;
+             CalFiveDayAveFromDBToSEC2(dc,sDefSec);
+             HistSecDispInfo(dc);
+             FindAndShowHistSecDB(dc,lStartHistSecRec, lEndHistSecRec);
+          }
+       }
+
+return TUI_ERROR;
+   
+}
+
+TWND dlg = TuiCreateWndTempl(page2, 0);
+                     TuiShowWnd(dlg, 1);
+
+struct sec2_header_rec
+{
+/* Header */
+        long    lNxtRec;        /* Next available record in new section */
+        long    lStartRec;              /* Start record of first sec history day */
+        long    lEndRec;                /* End record of last sec history day */
+/* End Header */
+};
+
+
+struct sec2_rec
+{
+/* Data */
+        long    p5DaysAvgPrice;         /* 5 days average trade price   */
+        double  v5DaysAvgVol;           /* 5 days average trade volume  */
+        double  a5DaysAvgVal;           /* 5 days average trade value   */
+        long    l5DaysBuyVolPct;        /* Percent of 5 Days buy volume */
+        long    l5DaysSellVolPct;       /* Percent of 5 Days sell volume */
+        long    l5DaysOpenVolPct;       /* Percent of 5 Days open volume */
+        long    p5DaysHigh;
+        long    p5DaysLow;
+};
+
+
+union sec2_rec_union                                    
+{                                                                              
+        struct sec2_rec d;                              
+        struct sec2_header_rec h;               
+        char sFull[ sizeof(struct sec2_rec) ];
+} sec2;
+
+
+ TuiRegisterCls(SCRVHISTSEC_NAME, ScrvSechistProc);
+  
+    wnd = TuiCreateFrameWndEx(
+        SCRVHISTSEC_NAME, SCRVHISTSEC_NAME,
+        TWS_WINDOW,
+        0,
+        0,
+        0,
+        0
+        
+        
+        
+        ,
+        80,
+        page1,
+        0
+    );
+	
+	
+	case TWM_PAINT:
+    {/*TuiInvalidateWnd(wnd);*/
+       
+		RECT rcwnd = { 3, 0, 18, 58 };
+        TuiDrawBorder(TuiGetDC(wnd), &rcwnd);
+		/*rcwnd.x = 39;
+		rcwnd.cols=19;*/
+        rcwnd.x = 59;
+		rcwnd.cols=21;
+        TuiDrawBorder(TuiGetDC(wnd), &rcwnd);
+         TuiDrawHLine(TuiGetDC(wnd),1,0,80,0);
+        TuiDrawHLine(TuiGetDC(wnd),22,0,80,0);
+
+        return 0;
+        
+    }
+	
+	case TWM_PAINT:
+    {/*TuiInvalidateWnd(wnd);*/
+       
+	    RECT rcwnd = { 0, 0, 22, 80};
+        TuiDrawBorder(TuiGetDC(wnd), &rcwnd);
+       
+        return 0;
+        
+    }
+	
+	
+	TuiMoveWnd(label,i+START_ROW,40,1,lLenScr[lValueCase]);
+        TuiSetWndStyle(label,lTypScr[lValueCase]);
+        DisplayInfo(wnd,buffer,lValueCase);
+		
+		
+		TuiSendMsg(TuiGetParent(wnd), TMW_HELPMSG, lBuffer, 0);
+		  case TMW_HELPMSG:
+    {
+        LONG ch = (LONG)wparam;
+        ShowHelpMsg(wnd,ch);
+      
+        break; 
+    }
+		
+
+		INT WantToUpdate(TWND wnd, LPCSTR text)
+{
+    TuiShowLineInputBox(TuiGetParent(wnd),
+                       TWN_UPDATERECORD,
+                       21, 0,
+                       "Do you want to update? (Y/N)",
+                       "Y",
+                       "YN",
+                       ALIGN_CENTER,
+                       TW_SHOW);
+
+    return TUI_CONTINUE;
+}
+
+
+void Rtn_FreeUserMem( struct usermem_rec *pUserRtn )
+{
+    free( pUserRtn );
+
+    pUserRtn = NULL;
+
+}
+
+TuiEnableWnd(label,TW_ENABLE);
+
+return TuiDefFrameWndProc(wnd, msg, wparam, lparam);
+
+case TWM_NOTIFY:
+    {
+        nmhdr = (NMHDR*)lparam;
+        switch (nmhdr->code)
+        {
+           
+            case TWN_UPDATERECORD:
+            {
+             RESPONSEMSGBOX* res = (RESPONSEMSGBOX*)lparam;
+             if (res->text[0] == 'Y')
+             {
+              
+             }
+             if (res->text[0] == 'N')
+             {
+               
+             }
+              break;
+             
+             }
+
+             case TCN_DISPLAYINFO:
+             {
+                DISPLAYINFO* di = (DISPLAYINFO*)nmhdr;
+                label = TuiGetWndItem(wnd,IDC_STATUSBAR);
+                TuiSetWndText(label, di->text);
+                break;
+             }
+         }
+            
+         break;
+    }
+		
+
+
+
